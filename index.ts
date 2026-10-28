@@ -47,7 +47,7 @@ const tryAddBucket = (
   bucket: TransactionInstruction[],
   addressLookupTableAccounts: AddressLookupTableAccount[]
 ): TransactionMessage | null => {
-  // Build a new message instead of mutating the caller's message. Mutating
+  // MBO-1 Fix: Build a new message instead of mutating the caller's message. Mutating
   // shared TransactionMessage instances makes the result depend on call order
   // and can leave a partially updated message behind when the size check fails.
   const candidate = new TransactionMessage({
@@ -78,6 +78,7 @@ export const packageInstructions = (
   instructionsBuckets: TransactionInstruction[][],
   addressLookupTableAccounts: AddressLookupTableAccount[]
 ): PackagedBatchedInstructionsResult => {
+  // MBO-3 Fix: Explicit input validation
   if (!Array.isArray(instructionsBuckets)) {
     throw new Error("instructionsBuckets must be an array of instruction arrays");
   }
@@ -97,6 +98,7 @@ export const packageInstructions = (
   });
 
   instructionsBuckets.forEach((bucket, index) => {
+    // MBO-3 Fix: Explicitly check bucket arrays
     if (!Array.isArray(bucket)) {
       throw new Error(`Instruction bucket at index ${index} must be an array`);
     }
@@ -188,6 +190,7 @@ export function createBatchAddSingleTransaction({
   };
   fees?: number;
 }): VersionedTransaction {
+  // MBO-3 Fix: Explicit input validations added for strings, integers and ranges
   if (!blockhash) {
     throw new Error("blockhash is required");
   }
@@ -203,7 +206,7 @@ export function createBatchAddSingleTransaction({
 
   const batchIx = multisig.instructions.batchAddTransaction({
     vaultIndex,
-    multisigPda: squadAddress,
+    multisigPda: squadAddress, // MBO-3 Fix: Use squadAddress directly as it is already a PublicKey
     member: proposer,
     rentPayer,
     batchIndex,
@@ -220,7 +223,7 @@ export function createBatchAddSingleTransaction({
       recentBlockhash: blockhash,
       instructions: [
         ComputeBudgetProgram.setComputeUnitPrice({
-          // Use `??` so that an explicit fee of 0 is preserved.
+          // MBO-2 Fix: Use `??` so that an explicit fee of 0 is intentionally preserved.
           microLamports: fees ?? PRIORITY_FEES,
         }),
         ComputeBudgetProgram.setComputeUnitLimit({
